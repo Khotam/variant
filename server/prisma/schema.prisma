@@ -72,6 +72,7 @@ model DealInvestment {
   investorId           String
   expectedContribution Decimal @db.Decimal(12, 2)
   actualContribution   Decimal @db.Decimal(12, 2)
+  reinvestedAmount     Decimal @db.Decimal(12, 2) @default(0)
   debtAmount           Decimal @db.Decimal(12, 2)
 
   deal     Deal @relation(fields: [dealId], references: [id])

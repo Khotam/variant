@@ -423,6 +423,43 @@ variant/
 
 ---
 
+---
+
+### Epic 7 — Reinvestment Tracking
+
+**US-701 — Split investor contributions into cash and reinvested**
+> As an investor, I want to record how much of my deal contribution came from fresh cash vs. recycled customer payments, so the business pool is tracked accurately.
+
+Acceptance criteria:
+- When creating a deal (Step 4 – Investments), each investor has **two inputs** per deal:
+  - **Cash (fresh)**: money coming from the investor's own pocket
+  - **Reinvested (from pool)**: money drawn from the accumulated customer payment pool
+- The debt calculation still uses `actualContribution = cash + reinvested` vs. `expectedContribution`
+- Both values are stored on `deal_investments.reinvestedAmount` (cash is derived: `actualContribution − reinvestedAmount`)
+- The step shows the current pool balance as a hint: "Pool available: $X"
+- Reinvested field defaults to 0 (optional — leaving it blank means fully fresh cash)
+
+**US-702 — Business Pool widget on dashboard**
+> As an investor, I want to see how much customer payment money is available to reinvest into new deals.
+
+Acceptance criteria:
+- Dashboard shows a **"Available to Reinvest"** stat card
+- Value = total customer payments received across all deals − total reinvested amounts committed across all deals
+- Subtitle shows total reinvested so far
+- Pool cannot go negative in the display (shows $0 if over-allocated)
+
+**Business Rule: Pool formula**
+```
+Pool = Σ(all customer payments received, all deals) − Σ(reinvestedAmount across all deal_investments)
+```
+
+**What this does NOT do:**
+- Does not change debt calculation — debts are still based on `actualContribution` vs `expectedContribution`
+- Does not change `totalInvested` on the dashboard — that still shows total at-risk capital (including reinvested)
+- Does not require tracking where reinvested money came from at the payment level — pool is a derived aggregate
+
+---
+
 ## Resolved Decisions
 
 | Decision | Resolution |

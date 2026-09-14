@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +14,7 @@ interface Deal {
   productName: string;
   cost: number;
   sellingPrice: number;
+  markupPercent: number;
   advancePayment: number;
   monthlyInstallment: number;
   startDate: string;
@@ -25,16 +26,28 @@ interface Deal {
 export function Deals() {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
 
   const { data: deals = [], isLoading } = useQuery({
     queryKey: ['deals', statusFilter, search],
     queryFn: () =>
-      getDeals({
-        status: statusFilter || undefined,
-        search: search || undefined,
-      }),
+        getDeals({
+          status: statusFilter || undefined,
+          search: search || undefined,
+        }),
   });
+
+  const totals = useMemo(
+      () =>
+          deals.reduce(
+              (acc: { received: number; remaining: number }, deal: Deal) => ({
+                received: acc.received + Number(deal.totalReceived || 0),
+                remaining: acc.remaining + Number(deal.remaining || 0),
+              }),
+              { received: 0, remaining: 0 }
+          ),
+      [deals]
+  );
 
   return (
     <div className="space-y-6">
@@ -79,8 +92,10 @@ export function Deals() {
               <tr className="border-b border-slate-100 bg-slate-50">
                 <th className="text-left px-4 py-3 font-medium text-slate-500">{t('deals.customer')}</th>
                 <th className="text-left px-4 py-3 font-medium text-slate-500">{t('deals.product')}</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-500">{t('deals.cost')}</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-500">{t('deals.sellingPrice')}</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-500">{t('deals.advance')}</th>
+                <th className="text-right px-4 py-3 font-medium text-slate-500">{t('dealDetail.markupPercent')}</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-500">{t('deals.monthly')}</th>
                 <th className="text-left px-4 py-3 font-medium text-slate-500">{t('deals.startDate')}</th>
                 <th className="text-right px-4 py-3 font-medium text-slate-500">{t('deals.received')}</th>
@@ -91,13 +106,13 @@ export function Deals() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-slate-400">
+                  <td colSpan={11} className="text-center py-8 text-slate-400">
                     {t('common.loading')}
                   </td>
                 </tr>
               ) : deals.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-8 text-slate-400">
+                  <td colSpan={11} className="text-center py-8 text-slate-400">
                     {t('deals.noDeals')}
                   </td>
                 </tr>
@@ -114,8 +129,10 @@ export function Deals() {
                         {deal.productName}
                       </Link>
                     </td>
+                    <td className="px-4 py-3 text-right text-slate-500">{formatCurrency(deal.cost)}</td>
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(deal.sellingPrice)}</td>
                     <td className="px-4 py-3 text-right text-slate-500">{formatCurrency(deal.advancePayment)}</td>
+                    <td className="px-4 py-3 text-right text-green-600 font-medium">{Number(deal.markupPercent).toFixed(1)}%</td>
                     <td className="px-4 py-3 text-right text-slate-500">{formatCurrency(deal.monthlyInstallment)}</td>
                     <td className="px-4 py-3 text-slate-500">{formatDate(deal.startDate)}</td>
                     <td className="px-4 py-3 text-right text-green-600 font-medium">{formatCurrency(deal.totalReceived)}</td>
@@ -127,9 +144,21 @@ export function Deals() {
                 ))
               )}
             </tbody>
-          </table>
+              {!isLoading && deals.length > 0 && (
+                  <tfoot>
+                  <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
+                    <td className="px-4 py-3 text-slate-700" colSpan={8}>
+                      {t('deals.total')}
+                    </td>
+                    <td className="px-4 py-3 text-right text-green-700">{formatCurrency(totals.received)}</td>
+                    <td className="px-4 py-3 text-right text-amber-700">{formatCurrency(totals.remaining)}</td>
+                    <td className="px-4 py-3" />
+                  </tr>
+                  </tfoot>
+              )}
+            </table>
+          </div>
         </div>
       </div>
-    </div>
   );
 }

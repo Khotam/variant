@@ -36,7 +36,9 @@
     "noOverdue": "No overdue payments.",
     "owes": "owes",
     "debtCleared": "All debts are cleared.",
-    "netDebtAfterSettlements": "Net debt after settlements"
+    "netDebtAfterSettlements": "Net debt after settlements",
+    "businessPool": "Available to Reinvest",
+    "businessPoolSubtitle": "reinvested so far"
   },
   "customers": {
     "title": "Customers",
@@ -63,7 +65,11 @@
     "duplicatePhoneWarning": "Warning: this phone may already exist",
     "customerCreated": "Customer created successfully",
     "customerUpdated": "Customer updated successfully",
-    "createdAt": "Member since"
+    "createdAt": "Member since",
+    "deleteCustomer": "Delete Customer",
+    "confirmDeleteCustomer": "Are you sure you want to permanently delete this customer? This cannot be undone.",
+    "cannotDeleteWithDeals": "Cannot delete a customer with existing deals.",
+    "customerDeleted": "Customer deleted successfully"
   },
   "customerDetail": {
     "title": "Customer Profile",
@@ -93,7 +99,8 @@
     "actions": "Actions",
     "noDeals": "No deals found.",
     "viewDeal": "View Deal",
-    "filterByStatus": "Filter by status"
+    "filterByStatus": "Filter by status",
+    "total": "Total"
   },
   "dealDetail": {
     "title": "Deal Details",
@@ -123,7 +130,12 @@
     "markupPercent": "Markup %",
     "paymentDate": "Payment Date",
     "amount": "Amount",
-    "recordedBy": "Recorded By"
+    "recordedBy": "Recorded By",
+    "cashContribution": "Cash",
+    "reinvestedAmount": "Reinvested",
+    "deleteDeal": "Delete Deal",
+    "confirmDeleteDeal": "Are you sure you want to permanently delete this deal? This cannot be undone.",
+    "confirmDeleteDealWithPayments": "This deal has recorded payments. Deleting it will permanently remove the deal and all its payment history. This cannot be undone."
   },
   "newDeal": {
     "title": "New Deal",
@@ -161,7 +173,10 @@
     "shortfall": "Shortfall (debt)",
     "totalContributions": "Total contributions",
     "mustEqualCost": "must equal cost",
-    "dealCreated": "Deal created successfully"
+    "dealCreated": "Deal created successfully",
+    "cashContribution": "Cash (fresh)",
+    "reinvestedAmount": "Reinvested (from pool)",
+    "poolAvailable": "Pool available"
   },
   "payments": {
     "recordPayment": "Record Payment",

@@ -49,6 +49,7 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
         notes: c.notes,
         createdAt: c.createdAt,
         activeDeals,
+        totalDeals: c.deals.length,
         totalOutstanding,
       };
     });
@@ -204,6 +205,33 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
     res.json(customer);
   } catch (error) {
     console.error('Update customer error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    const customer = await prisma.customer.findUnique({
+      where: { id },
+      include: { deals: { select: { id: true } } },
+    });
+
+    if (!customer) {
+      res.status(404).json({ error: 'Customer not found' });
+      return;
+    }
+
+    if (customer.deals.length > 0) {
+      res.status(400).json({ error: 'Cannot delete a customer with existing deals' });
+      return;
+    }
+
+    await prisma.customer.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete customer error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

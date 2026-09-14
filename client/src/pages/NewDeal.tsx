@@ -65,7 +65,8 @@ export function NewDeal() {
   const [dealNotes, setDealNotes] = useState('');
 
   // Step 4 — Investments
-  const [investments, setInvestments] = useState<Record<string, string>>({});
+  const [investments, setInvestments] = useState<Record<string, { cash: string; reinvested: string }>>({});
+  const [businessPool, setBusinessPool] = useState(0);
 
   const [stepError, setStepError] = useState('');
 
@@ -117,9 +118,12 @@ export function NewDeal() {
                 displayName: s.displayName,
               }));
               setUsers(u);
-              const initial: Record<string, string> = {};
-              u.forEach((usr) => { initial[usr.id] = ''; });
+              const initial: Record<string, { cash: string; reinvested: string }> = {};
+              u.forEach((usr) => { initial[usr.id] = { cash: '', reinvested: '0' }; });
               setInvestments(initial);
+              if (data.businessPool !== undefined) {
+                setBusinessPool(data.businessPool);
+              }
             }
           });
       });
@@ -150,7 +154,8 @@ export function NewDeal() {
   const monthsNum = parseInt(installmentMonths) || 1;
 
   const markupAmount = sellingPriceNum - costNum;
-  const markupPercent = costNum > 0 ? (markupAmount / costNum) * 100 : 0;
+  const netCost = costNum - advanceNum;
+  const markupPercent = netCost > 0 ? ((sellingPriceNum - advanceNum) / netCost - 1) * 100 : 0;
   const monthlyInstallment =
     sellingPriceNum > 0 && monthsNum > 0
       ? (sellingPriceNum - advanceNum) / monthsNum
@@ -164,7 +169,11 @@ export function NewDeal() {
   );
 
   const totalInvestments = Object.values(investments).reduce(
-    (sum, v) => sum + (parseFloat(v) || 0),
+    (sum, v) => sum + (parseFloat(v.cash) || 0) + (parseFloat(v.reinvested) || 0),
+    0
+  );
+  const totalReinvested = Object.values(investments).reduce(
+    (sum, v) => sum + (parseFloat(v.reinvested) || 0),
     0
   );
 
@@ -230,10 +239,15 @@ export function NewDeal() {
   const handleSubmit = async () => {
     setStepError('');
 
-    const invArray = users.map((u) => ({
-      investorId: u.id,
-      actualContribution: parseFloat(investments[u.id] || '0'),
-    }));
+    const invArray = users.map((u) => {
+      const cash = parseFloat(investments[u.id]?.cash || '0');
+      const reinvested = parseFloat(investments[u.id]?.reinvested || '0');
+      return {
+        investorId: u.id,
+        actualContribution: cash + reinvested,
+        reinvestedAmount: reinvested,
+      };
+    });
 
     const totalContrib = invArray.reduce((s, i) => s + i.actualContribution, 0);
     if (Math.abs(totalContrib - costNum) > 0.01) {
@@ -629,23 +643,32 @@ export function NewDeal() {
         {step === 4 && (
           <div className="space-y-4">
             <h2 className="text-base font-semibold text-slate-800">{t('newDeal.step4')}</h2>
-            <p className="text-sm text-slate-500">
-              Total cost: <span className="font-semibold">{formatCurrency(costNum)}</span>
-              {' — '}Expected per investor:{' '}
-              <span className="font-semibold">
-                {formatCurrency(users.length > 0 ? costNum / users.length : 0)}
-              </span>
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-slate-500">
+                {t('newDeal.cost')}: <span className="font-semibold">{formatCurrency(costNum)}</span>
+                {' — '}{t('newDeal.expectedContribution')}:{' '}
+                <span className="font-semibold">
+                  {formatCurrency(users.length > 0 ? costNum / users.length : 0)}
+                </span>
+              </p>
+              {businessPool > 0 && (
+                <span className="text-xs font-medium text-cyan-700 bg-cyan-50 border border-cyan-200 rounded-lg px-2 py-1">
+                  {t('newDeal.poolAvailable')}: {formatCurrency(businessPool)}
+                </span>
+              )}
+            </div>
 
             <div className="space-y-3">
               {users.map((user) => {
-                const actual = parseFloat(investments[user.id] || '0');
+                const cash = parseFloat(investments[user.id]?.cash || '0');
+                const reinvested = parseFloat(investments[user.id]?.reinvested || '0');
+                const actual = cash + reinvested;
                 const expected = users.length > 0 ? costNum / users.length : 0;
                 const shortfall = expected - actual;
 
                 return (
                   <div key={user.id} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-semibold text-indigo-700">
                           {user.displayName[0]}
@@ -653,29 +676,52 @@ export function NewDeal() {
                         <span className="font-medium text-slate-800">{user.displayName}</span>
                       </div>
                       <span className="text-xs text-slate-500">
-                        Expected: {formatCurrency(expected)}
+                        {t('newDeal.expectedContribution')}: {formatCurrency(expected)}
                       </span>
                     </div>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder={t('newDeal.actualContribution')}
-                      value={investments[user.id] || ''}
-                      onChange={(e) =>
-                        setInvestments({ ...investments, [user.id]: e.target.value })
-                      }
-                    />
-                    {actual > 0 && Math.abs(shortfall) > 0.01 && (
-                      <p
-                        className={`text-xs mt-1 ${
-                          shortfall > 0 ? 'text-red-500' : 'text-green-500'
-                        }`}
-                      >
-                        {shortfall > 0
-                          ? `Shortfall (debt): ${formatCurrency(shortfall)}`
-                          : `Over-contribution: ${formatCurrency(Math.abs(shortfall))}`}
-                      </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        label={t('newDeal.cashContribution')}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={investments[user.id]?.cash || ''}
+                        onChange={(e) =>
+                          setInvestments({
+                            ...investments,
+                            [user.id]: { ...investments[user.id], cash: e.target.value },
+                          })
+                        }
+                      />
+                      <Input
+                        label={t('newDeal.reinvestedAmount')}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={investments[user.id]?.reinvested || ''}
+                        onChange={(e) =>
+                          setInvestments({
+                            ...investments,
+                            [user.id]: { ...investments[user.id], reinvested: e.target.value },
+                          })
+                        }
+                      />
+                    </div>
+                    {actual > 0 && (
+                      <div className="mt-2 flex items-center justify-between text-xs">
+                        <span className="text-slate-500">
+                          Total: <span className="font-semibold text-slate-700">{formatCurrency(actual)}</span>
+                        </span>
+                        {Math.abs(shortfall) > 0.01 && (
+                          <span className={shortfall > 0 ? 'text-red-500' : 'text-green-500'}>
+                            {shortfall > 0
+                              ? `${t('newDeal.shortfall')}: ${formatCurrency(shortfall)}`
+                              : `Over: ${formatCurrency(Math.abs(shortfall))}`}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -690,8 +736,16 @@ export function NewDeal() {
                   : 'bg-amber-50 border-amber-200 text-amber-700'
               }`}
             >
-              {t('newDeal.totalContributions')}: {formatCurrency(totalInvestments)} /{' '}
-              {t('newDeal.mustEqualCost')}: {formatCurrency(costNum)}
+              <div className="flex items-center justify-between">
+                <span>
+                  {t('newDeal.totalContributions')}: {formatCurrency(totalInvestments)} / {t('newDeal.mustEqualCost')}: {formatCurrency(costNum)}
+                </span>
+                {totalReinvested > 0 && (
+                  <span className="text-xs text-cyan-700 font-medium">
+                    {t('newDeal.reinvestedAmount')}: {formatCurrency(totalReinvested)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         )}

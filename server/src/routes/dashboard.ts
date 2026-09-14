@@ -7,11 +7,11 @@ router.use(requireAuth);
 
 router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const today = new Date(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T00:00:00.000Z`);
 
     const thirtyDaysFromNow = new Date(today);
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    thirtyDaysFromNow.setUTCDate(thirtyDaysFromNow.getUTCDate() + 30);
 
     const [deals, users, settlements, upcomingInstallments, overdueInstallments] =
       await Promise.all([
@@ -63,12 +63,36 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
     const activeDeals = deals.filter((d) => d.status === 'ACTIVE');
     const settledDeals = deals.filter((d) => d.status === 'SETTLED');
 
+    // Fresh cash only — reinvested amounts are already inside the business
     const totalInvested = activeDeals.reduce(
       (sum, d) =>
         sum +
-        d.investments.reduce((s, i) => s + Number(i.actualContribution), 0),
+        d.investments.reduce(
+          (s, i) => s + Number(i.actualContribution) - Number(i.reinvestedAmount ?? 0),
+          0
+        ),
       0
     );
+
+    // Same as totalInvested but across all deals (used for pool calculation)
+    const totalFreshCash = deals.reduce(
+      (sum, d) =>
+        sum +
+        d.investments.reduce(
+          (s, i) => s + Number(i.actualContribution) - Number(i.reinvestedAmount ?? 0),
+          0
+        ),
+      0
+    );
+
+    // Total reinvested across all deals
+    const totalReinvested = deals.reduce(
+      (sum, d) =>
+        sum +
+        d.investments.reduce((s, i) => s + Number(i.reinvestedAmount ?? 0), 0),
+      0
+    );
+
     const totalExpectedReturn = activeDeals.reduce(
       (sum, d) => sum + Number(d.sellingPrice),
       0
@@ -80,6 +104,10 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
       );
       return sum + installmentPaid + Number(d.advancePayment);
     }, 0);
+
+    // Pool = all customer payments ever received minus what's been committed as reinvestment
+    // Positive = cash sitting in business available to redeploy
+    const businessPool = Math.max(0, totalReceived - totalReinvested);
 
     const totalOutstanding = activeDeals.reduce((sum, d) => {
       const installmentPaid = d.installments.reduce(
@@ -99,6 +127,13 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
         const inv = d.investments.find((i) => i.investorId === user.id);
         return sum + (inv ? parseFloat(inv.actualContribution.toString()) : 0);
       }, 0);
+
+      const totalReinvestedByUser = userDeals.reduce((sum, d) => {
+        const inv = d.investments.find((i) => i.investorId === user.id);
+        return sum + (inv ? parseFloat((inv.reinvestedAmount ?? 0).toString()) : 0);
+      }, 0);
+
+      const totalFreshCash = totalContributed - totalReinvestedByUser;
 
       // Expected investment contribution (cost/2 per deal, not selling price)
       const totalExpectedContribution = userDeals.reduce((sum, d) => {
@@ -133,6 +168,8 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
         userId: user.id,
         displayName: user.displayName,
         totalContributed,
+        totalFreshCash,
+        totalReinvestedByUser,
         totalExpectedContribution,
         totalExpected,
         totalReceived: totalReceived50,
@@ -184,6 +221,9 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 
     res.json({
       totalInvested,
+      totalFreshCash: Math.round(totalFreshCash * 100) / 100,
+      totalReinvested: Math.round(totalReinvested * 100) / 100,
+      businessPool: Math.round(businessPool * 100) / 100,
       totalExpectedReturn,
       totalReceived,
       totalOutstanding,

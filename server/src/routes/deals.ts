@@ -43,8 +43,8 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   const { status, search } = req.query;
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const _n = new Date();
+    const today = new Date(`${_n.getFullYear()}-${String(_n.getMonth() + 1).padStart(2, '0')}-${String(_n.getDate()).padStart(2, '0')}T00:00:00.000Z`);
 
     const deals = await prisma.deal.findMany({
       where: {
@@ -65,7 +65,7 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
           include: { investor: { select: { id: true, displayName: true } } },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { startDate: 'desc' },
     });
 
     const result = deals.map((deal) => {
@@ -137,7 +137,8 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
     const monthsNum = Number(installmentMonths);
 
     const markupAmount = sellingPriceNum - costNum;
-    const markupPercent = (markupAmount / costNum) * 100;
+    const netCost = costNum - advanceNum;
+    const markupPercent = netCost > 0 ? ((sellingPriceNum - advanceNum) / netCost - 1) * 100 : 0;
     const monthlyInstallment =
       Math.floor(((sellingPriceNum - advanceNum) / monthsNum) * 100) / 100;
 
@@ -167,14 +168,16 @@ router.post('/', async (req: AuthRequest, res: Response): Promise<void> => {
         notes,
         createdById: req.userId!,
         investments: {
-          create: investments.map((inv: { investorId: string; actualContribution: number }) => {
+          create: investments.map((inv: { investorId: string; actualContribution: number; reinvestedAmount?: number }) => {
             const expectedContribution = costNum / investments.length;
             const actualContribution = Number(inv.actualContribution);
+            const reinvestedAmount = Number(inv.reinvestedAmount ?? 0);
             const debtAmount = expectedContribution - actualContribution;
             return {
               investorId: inv.investorId,
               expectedContribution: new Decimal(expectedContribution),
               actualContribution: new Decimal(actualContribution),
+              reinvestedAmount: new Decimal(reinvestedAmount),
               debtAmount: new Decimal(debtAmount),
             };
           }),
@@ -209,8 +212,8 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const _n = new Date();
+    const today = new Date(`${_n.getFullYear()}-${String(_n.getMonth() + 1).padStart(2, '0')}-${String(_n.getDate()).padStart(2, '0')}T00:00:00.000Z`);
 
     const deal = await prisma.deal.findUnique({
       where: { id },
@@ -304,8 +307,10 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
       if (cost !== undefined) {
         const costNum = Number(cost);
         const sellingPriceNum = sellingPrice ? Number(sellingPrice) : Number(deal.sellingPrice);
+        const advanceNum2 = advancePayment !== undefined ? Number(advancePayment) : Number(deal.advancePayment);
         const markupAmount = sellingPriceNum - costNum;
-        const markupPercent = (markupAmount / costNum) * 100;
+        const netCost2 = costNum - advanceNum2;
+        const markupPercent = netCost2 > 0 ? ((sellingPriceNum - advanceNum2) / netCost2 - 1) * 100 : 0;
         updateData.cost = new Decimal(costNum);
         updateData.markupAmount = new Decimal(markupAmount);
         updateData.markupPercent = new Decimal(markupPercent);
@@ -343,12 +348,38 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   }
 });
 
+router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    const deal = await prisma.deal.findUnique({ where: { id } });
+
+    if (!deal) {
+      res.status(404).json({ error: 'Deal not found' });
+      return;
+    }
+
+    // Delete in dependency order inside a transaction
+    await prisma.$transaction([
+      prisma.payment.deleteMany({ where: { dealId: id } }),
+      prisma.installment.deleteMany({ where: { dealId: id } }),
+      prisma.dealInvestment.deleteMany({ where: { dealId: id } }),
+      prisma.deal.delete({ where: { id } }),
+    ]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete deal error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:id/statement', async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const _n = new Date();
+    const today = new Date(`${_n.getFullYear()}-${String(_n.getMonth() + 1).padStart(2, '0')}-${String(_n.getDate()).padStart(2, '0')}T00:00:00.000Z`);
 
     const deal = await prisma.deal.findUnique({
       where: { id },

@@ -60,6 +60,9 @@ export const updateCustomer = (
   }
 ) => api.put(`/customers/${id}`, data).then((r) => r.data);
 
+export const deleteCustomer = (id: string) =>
+  api.delete(`/customers/${id}`).then((r) => r.data);
+
 // Deals
 export const getDeals = (params?: { status?: string; search?: string }) =>
   api.get('/deals', { params }).then((r) => r.data);
@@ -72,6 +75,9 @@ export const getDeal = (id: string) =>
 
 export const updateDeal = (id: string, data: unknown) =>
   api.put(`/deals/${id}`, data).then((r) => r.data);
+
+export const deleteDeal = (id: string) =>
+  api.delete(`/deals/${id}`).then((r) => r.data);
 
 export const getDealStatement = (id: string) =>
   api.get(`/deals/${id}/statement`).then((r) => r.data);

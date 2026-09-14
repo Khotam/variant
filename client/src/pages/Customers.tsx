@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MagnifyingGlassIcon, PlusIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
-import { getCustomers, createCustomer, updateCustomer } from '../lib/api';
+import { MagnifyingGlassIcon, PlusIcon, PencilSquareIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../lib/api';
 import { formatCurrency } from '../lib/utils';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
@@ -33,6 +33,7 @@ interface Customer {
   address?: string;
   notes?: string;
   activeDeals: number;
+  totalDeals: number;
   totalOutstanding: number;
 }
 
@@ -45,6 +46,8 @@ export function Customers() {
   const [form, setForm] = useState<CustomerFormData>(defaultForm);
   const [formError, setFormError] = useState('');
   const [duplicateWarning, setDuplicateWarning] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [deleteError, setDeleteError] = useState('');
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers', search],
@@ -115,6 +118,18 @@ export function Customers() {
       createMutation.mutate(form);
     }
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteCustomer(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setDeleteTarget(null);
+      setDeleteError('');
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      setDeleteError(err?.response?.data?.error || t('common.error'));
+    },
+  });
 
   const isMutating = createMutation.isPending || updateMutation.isPending;
 
@@ -200,6 +215,14 @@ export function Customers() {
                         >
                           <PencilSquareIcon className="h-4 w-4" />
                         </button>
+                        <button
+                          onClick={() => { setDeleteTarget(c); setDeleteError(''); }}
+                          disabled={c.totalDeals > 0}
+                          title={c.totalDeals > 0 ? t('customers.cannotDeleteWithDeals') : t('customers.deleteCustomer')}
+                          className="text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -209,6 +232,40 @@ export function Customers() {
           </table>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => { setDeleteTarget(null); setDeleteError(''); }}
+        title={t('customers.deleteCustomer')}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600">{t('customers.confirmDeleteCustomer')}</p>
+          {deleteError && (
+            <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+              {deleteError}
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <Button
+              variant="danger"
+              loading={deleteMutation.isPending}
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+              className="flex-1"
+            >
+              {t('common.delete')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => { setDeleteTarget(null); setDeleteError(''); }}
+              disabled={deleteMutation.isPending}
+            >
+              {t('common.cancel')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Customer Modal */}
       <Modal

@@ -8,6 +8,7 @@ import {
   ExclamationCircleIcon,
   DocumentTextIcon,
   ClockIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { getDashboard } from '../lib/api';
 import { formatCurrency, formatDate } from '../lib/utils';
@@ -46,30 +47,37 @@ export function Dashboard() {
       <h1 className="text-2xl font-bold text-slate-800">{t('dashboard.title')}</h1>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title={t('dashboard.totalInvested')}
-          value={formatCurrency(data?.totalInvested)}
-          icon={<BanknotesIcon className="h-5 w-5" />}
-          color="indigo"
-        />
-        <StatCard
-          title={t('dashboard.totalExpectedReturn')}
-          value={formatCurrency(data?.totalExpectedReturn)}
-          icon={<ArrowTrendingUpIcon className="h-5 w-5" />}
-          color="green"
-        />
-        <StatCard
-          title={t('dashboard.totalReceived')}
-          value={formatCurrency(data?.totalReceived)}
-          icon={<CheckCircleIcon className="h-5 w-5" />}
-          color="green"
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+        {/*<StatCard*/}
+        {/*  title={t('dashboard.totalInvested')}*/}
+        {/*  value={formatCurrency(data?.totalInvested)}*/}
+        {/*  icon={<BanknotesIcon className="h-5 w-5" />}*/}
+        {/*  color="indigo"*/}
+        {/*/>*/}
+        {/*<StatCard*/}
+        {/*  title={t('dashboard.totalExpectedReturn')}*/}
+        {/*  value={formatCurrency(data?.totalExpectedReturn)}*/}
+        {/*  icon={<ArrowTrendingUpIcon className="h-5 w-5" />}*/}
+        {/*  color="green"*/}
+        {/*/>*/}
+        {/*<StatCard*/}
+        {/*  title={t('dashboard.totalReceived')}*/}
+        {/*  value={formatCurrency(data?.totalReceived)}*/}
+        {/*  icon={<CheckCircleIcon className="h-5 w-5" />}*/}
+        {/*  color="green"*/}
+        {/*/>*/}
         <StatCard
           title={t('dashboard.totalOutstanding')}
           value={formatCurrency(data?.totalOutstanding)}
           icon={<ExclamationCircleIcon className="h-5 w-5" />}
           color="amber"
+        />
+        <StatCard
+            title={t('dashboard.businessPool')}
+            value={formatCurrency(data?.businessPool ?? 0)}
+            icon={<ArrowPathIcon className="h-5 w-5" />}
+            color="indigo"
+            subtitle={data?.totalReinvested > 0 ? `${formatCurrency(data.totalReinvested)} reinvested` : undefined}
         />
       </div>
 

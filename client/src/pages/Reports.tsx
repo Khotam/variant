@@ -237,6 +237,8 @@ export function Reports() {
               userId: string;
               displayName: string;
               totalContributed: number;
+              totalFreshCash: number;
+              totalReinvestedByUser: number;
               totalExpected: number;
               totalReceived: number;
               pendingReturn: number;
@@ -251,7 +253,10 @@ export function Reports() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   <div className="rounded-lg bg-slate-50 p-3">
                     <p className="text-xs text-slate-500">{t('reports.totalContributed')}</p>
-                    <p className="text-base font-bold text-slate-800">{formatCurrency(inv.totalContributed)}</p>
+                    <p className="text-base font-bold text-slate-800">{formatCurrency(inv.totalFreshCash)}</p>
+                    {inv.totalReinvestedByUser > 0 && (
+                      <p className="text-xs text-cyan-600 mt-0.5">+{formatCurrency(inv.totalReinvestedByUser)} reinvested</p>
+                    )}
                   </div>
                   <div className="rounded-lg bg-green-50 p-3">
                     <p className="text-xs text-slate-500">{t('reports.totalExpected')}</p>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -8,7 +8,7 @@ import {
   PencilSquareIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
-import { getDeal, createPayment, updatePayment, deletePayment, updateDeal } from '../lib/api';
+import { getDeal, createPayment, updatePayment, deletePayment, updateDeal, deleteDeal } from '../lib/api';
 import { formatCurrency, formatDate, formatDateInput } from '../lib/utils';
 import { StatusBadge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -37,12 +37,14 @@ interface Payment {
 export function DealDetail() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [paymentModal, setPaymentModal] = useState<Installment | null>(null);
   const [editPaymentModal, setEditPaymentModal] = useState<Payment | null>(null);
   const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
   const [editDealModal, setEditDealModal] = useState(false);
+  const [deleteDealModal, setDeleteDealModal] = useState(false);
   const [statementOpen, setStatementOpen] = useState(false);
 
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -92,6 +94,15 @@ export function DealDetail() {
       queryClient.invalidateQueries({ queryKey: ['deal', id] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setDeletePaymentId(null);
+    },
+  });
+
+  const deleteDealMutation = useMutation({
+    mutationFn: () => deleteDeal(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      navigate('/deals');
     },
   });
 
@@ -192,6 +203,10 @@ export function DealDetail() {
           <Button variant="secondary" size="sm" onClick={openEdit}>
             <PencilSquareIcon className="h-4 w-4" />
             {t('dealDetail.editDeal')}
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => setDeleteDealModal(true)}>
+            <TrashIcon className="h-4 w-4" />
+            {t('dealDetail.deleteDeal')}
           </Button>
         </div>
       </div>
@@ -298,27 +313,41 @@ export function DealDetail() {
               investor: { id: string; displayName: string };
               expectedContribution: number;
               actualContribution: number;
+              reinvestedAmount: number;
               debtAmount: number;
-            }) => (
-              <div key={inv.id} className="flex items-center justify-between text-sm rounded-lg bg-slate-50 px-3 py-2">
-                <span className="font-medium text-slate-800">{inv.investor.displayName}</span>
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="text-slate-500">
-                    {t('dealDetail.expectedContribution')}: {formatCurrency(inv.expectedContribution)}
-                  </span>
-                  <span className="font-medium">
-                    {t('dealDetail.actualContribution')}: {formatCurrency(inv.actualContribution)}
-                  </span>
-                  {Number(inv.debtAmount) !== 0 && (
-                    <span className={Number(inv.debtAmount) > 0 ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
-                      {Number(inv.debtAmount) > 0
-                        ? `Owes: ${formatCurrency(inv.debtAmount)}`
-                        : `Over: ${formatCurrency(Math.abs(Number(inv.debtAmount)))}`}
-                    </span>
+            }) => {
+              const reinvested = Number(inv.reinvestedAmount ?? 0);
+              const cash = Number(inv.actualContribution) - reinvested;
+              return (
+                <div key={inv.id} className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-medium text-slate-800">{inv.investor.displayName}</span>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-slate-500">
+                        {t('dealDetail.expectedContribution')}: {formatCurrency(inv.expectedContribution)}
+                      </span>
+                      <span className="font-semibold text-slate-700">
+                        {t('dealDetail.actualContribution')}: {formatCurrency(inv.actualContribution)}
+                      </span>
+                      {Number(inv.debtAmount) !== 0 && (
+                        <span className={Number(inv.debtAmount) > 0 ? 'text-red-600 font-medium' : 'text-green-600 font-medium'}>
+                          {Number(inv.debtAmount) > 0
+                            ? `Owes: ${formatCurrency(inv.debtAmount)}`
+                            : `Over: ${formatCurrency(Math.abs(Number(inv.debtAmount)))}`}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {reinvested > 0 && (
+                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                      <span>{t('dealDetail.cashContribution')}: <span className="font-medium text-slate-700">{formatCurrency(cash)}</span></span>
+                      <span className="text-cyan-600">+</span>
+                      <span>{t('dealDetail.reinvestedAmount')}: <span className="font-medium text-cyan-700">{formatCurrency(reinvested)}</span></span>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -571,6 +600,22 @@ export function DealDetail() {
           </div>
         </form>
       </Modal>
+
+      {/* Delete Deal Confirm */}
+      <ConfirmModal
+        isOpen={deleteDealModal}
+        onClose={() => setDeleteDealModal(false)}
+        onConfirm={() => deleteDealMutation.mutate()}
+        title={t('dealDetail.deleteDeal')}
+        message={
+          deal?.payments?.length > 0
+            ? t('dealDetail.confirmDeleteDealWithPayments')
+            : t('dealDetail.confirmDeleteDeal')
+        }
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        loading={deleteDealMutation.isPending}
+      />
 
       {/* Statement Modal */}
       <StatementModal

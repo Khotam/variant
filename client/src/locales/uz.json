@@ -36,7 +36,9 @@
     "noOverdue": "Muddati o'tgan to'lovlar yo'q.",
     "owes": "qarzda",
     "debtCleared": "Barcha qarzlar to'langan.",
-    "netDebtAfterSettlements": "Hisob-kitobdan keyin sof qarz"
+    "netDebtAfterSettlements": "Hisob-kitobdan keyin sof qarz",
+    "businessPool": "Qayta Investitsiya Uchun",
+    "businessPoolSubtitle": "qayta investitsiya qilingan"
   },
   "customers": {
     "title": "Mijozlar",
@@ -63,7 +65,11 @@
     "duplicatePhoneWarning": "Ogohlantirish: bu telefon raqam allaqachon mavjud bo'lishi mumkin",
     "customerCreated": "Mijoz muvaffaqiyatli yaratildi",
     "customerUpdated": "Mijoz muvaffaqiyatli yangilandi",
-    "createdAt": "Ro'yxatdan o'tgan"
+    "createdAt": "Ro'yxatdan o'tgan",
+    "deleteCustomer": "Mijozni O'chirish",
+    "confirmDeleteCustomer": "Ushbu mijozni butunlay o'chirishga ishonchingiz komilmi? Bu amalni bekor qilib bo'lmaydi.",
+    "cannotDeleteWithDeals": "Bitimlar mavjud bo'lgan mijozni o'chirib bo'lmaydi.",
+    "customerDeleted": "Mijoz muvaffaqiyatli o'chirildi"
   },
   "customerDetail": {
     "title": "Mijoz Profili",
@@ -93,7 +99,8 @@
     "actions": "Amallar",
     "noDeals": "Bitimlar topilmadi.",
     "viewDeal": "Bitimni Ko'rish",
-    "filterByStatus": "Holat bo'yicha filtrlash"
+    "filterByStatus": "Holat bo'yicha filtrlash",
+    "total": "Umumiy"
   },
   "dealDetail": {
     "title": "Bitim Tafsilotlari",
@@ -123,7 +130,12 @@
     "markupPercent": "Ustama %",
     "paymentDate": "To'lov Sanasi",
     "amount": "Miqdor",
-    "recordedBy": "Qayd Etgan"
+    "recordedBy": "Qayd Etgan",
+    "cashContribution": "Naqd pul",
+    "reinvestedAmount": "Qayta investitsiya",
+    "deleteDeal": "Bitimni O'chirish",
+    "confirmDeleteDeal": "Ushbu bitimni butunlay o'chirishni tasdiqlaysizmi? Bu amalni bekor qilib bo'lmaydi.",
+    "confirmDeleteDealWithPayments": "Bu bitimda qayd etilgan to'lovlar mavjud. O'chirilsa, bitim va barcha to'lov tarixi butunlay o'chiriladi. Bu amalni bekor qilib bo'lmaydi."
   },
   "newDeal": {
     "title": "Yangi Bitim",
@@ -161,7 +173,10 @@
     "shortfall": "Kamomad (qarz)",
     "totalContributions": "Jami hissalar",
     "mustEqualCost": "narxga teng bo'lishi kerak",
-    "dealCreated": "Bitim muvaffaqiyatli yaratildi"
+    "dealCreated": "Bitim muvaffaqiyatli yaratildi",
+    "cashContribution": "Naqd pul",
+    "reinvestedAmount": "Qayta investitsiya (pooldan)",
+    "poolAvailable": "Pool mavjud"
   },
   "payments": {
     "recordPayment": "To'lovni Qayd Etish",
