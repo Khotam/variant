@@ -1,0 +1,46 @@
+name: variant
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: variant_postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: variant_db
+    ports:
+      - "9999:5432"
+    volumes:
+      - variant_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  server:
+    build: ./server
+    container_name: variant_server
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/variant_db
+      PORT: 4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  client:
+    build: ./client
+    container_name: variant_client
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+
+volumes:
+  variant_postgres_data:
+    name: variant_postgres_data
